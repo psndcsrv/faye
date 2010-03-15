@@ -234,9 +234,7 @@ Faye.Client = Faye.Class({
     this._transport.send({
       channel:  Faye.Channel.CLIENTS,
       id:       this._clientId,
-    }, function(response) {
-    callback(response);
-}, this);
+    }, callback, this);
   },
 
   handleAdvice: function(advice) {

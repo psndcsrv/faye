@@ -251,6 +251,7 @@ Faye.extend(Faye.Channel, {
   SUBSCRIBE:    '/meta/subscribe',
   UNSUBSCRIBE:  '/meta/unsubscribe',
   DISCONNECT:   '/meta/disconnect',
+  CLIENTS:      '/meta/clients',
   
   META:         'meta',
   SERVICE:      'service',
@@ -674,6 +675,16 @@ Faye.Client = Faye.Class({
     }, this);
   },
   
+  clients: function(callback) {
+    if (this._state !== this.CONNECTED) {
+	    return;
+	  }
+    this._transport.send({
+      channel:  Faye.Channel.CLIENTS,
+      id:       this._clientId,
+    }, callback, this);
+  },
+
   handleAdvice: function(advice) {
     Faye.extend(this._advice, advice);
     if (this._advice.reconnect === this.HANDSHAKE) this._clientId = null;
@@ -767,6 +778,11 @@ Faye.Server = Faye.Class({
     var ids = [];
     Faye.each(this._clients, function(key, value) { ids.push(key) });
     return ids;
+  },
+
+  clients: function() {
+    var ids = this.clientIds();
+    return {clients: ids}
   },
   
   process: function(messages, local, callback) {
