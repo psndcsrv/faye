@@ -195,7 +195,7 @@ module Faye
         channel = @channels[channel] ||= Channel.new(channel)
         client.subscribe(channel)
         
-        if (! Channel.subscribable_meta?(channel))
+        if (! Channel.subscribable_meta?(channel.name))
           # send notification to the clients subscribable metadata channel
           smeta_message = {"channel" =>"/smeta/clients#{channel.name}","data" => {"message" => "subscribe"},"clientId" => client_id}
           handle(smeta_message, true) {|r| nil }
@@ -238,7 +238,7 @@ module Faye
         channel = @channels[channel]
         if channel
           client.unsubscribe(channel)
-          if (! Channel.subscribable_meta?(channel))
+          if (! Channel.subscribable_meta?(channel.name))
             # send notification to the clients subscribable metadata channel
             smeta_message = {"channel" =>"/smeta/clients#{channel.name}","data" => {"message" => "unsubscribe"},"clientId" => client_id}
             handle(smeta_message, true) {|r| nil }
