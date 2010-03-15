@@ -17,8 +17,11 @@ module Faye
       @clients.keys
     end
     
-    def clients
-      client_ids
+    def clients(message, local = false)
+      response =  { 'channel' => Channel::CLIENTS,
+                    'id'      => message['id'] }
+      response['clients'] = client_ids
+      response
     end
     
     def process(messages, local = false, &callback)
