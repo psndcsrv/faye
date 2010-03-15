@@ -227,6 +227,18 @@ Faye.Client = Faye.Class({
     }, this);
   },
   
+  clients: function(callback) {
+    if (this._state !== this.CONNECTED) {
+	    return;
+	  }
+    this._transport.send({
+      channel:  Faye.Channel.CLIENTS,
+      id:       this._clientId,
+    }, function(response) {
+    callback(response);
+}, this);
+  },
+
   handleAdvice: function(advice) {
     Faye.extend(this._advice, advice);
     if (this._advice.reconnect === this.HANDSHAKE) this._clientId = null;

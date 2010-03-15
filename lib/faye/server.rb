@@ -17,6 +17,10 @@ module Faye
       @clients.keys
     end
     
+    def clients
+      client_ids
+    end
+    
     def process(messages, local = false, &callback)
       messages = [messages].flatten
       processed, responses = 0, []

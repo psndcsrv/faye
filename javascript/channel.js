@@ -16,6 +16,7 @@ Faye.extend(Faye.Channel, {
   SUBSCRIBE:    '<%= Faye::Channel::SUBSCRIBE %>',
   UNSUBSCRIBE:  '<%= Faye::Channel::UNSUBSCRIBE %>',
   DISCONNECT:   '<%= Faye::Channel::DISCONNECT %>',
+  CLIENTS:      '<%= Faye::Channel::CLIENTS %>',
   
   META:         '<%= Faye::Channel::META %>',
   SERVICE:      '<%= Faye::Channel::SERVICE %>',

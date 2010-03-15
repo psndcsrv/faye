@@ -11,6 +11,11 @@ Faye.Server = Faye.Class({
     Faye.each(this._clients, function(key, value) { ids.push(key) });
     return ids;
   },
+
+  clients: function() {
+    var ids = this.clientIds();
+    return {clients: ids}
+  },
   
   process: function(messages, local, callback) {
     messages = [].concat(messages);

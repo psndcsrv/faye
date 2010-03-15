@@ -18,6 +18,7 @@ module Faye
     SUBSCRIBE   = '/meta/subscribe'
     UNSUBSCRIBE = '/meta/unsubscribe'
     DISCONNECT  = '/meta/disconnect'
+    CLIENTS     = '/meta/clients'
     
     META        = :meta
     SERVICE     = :service
