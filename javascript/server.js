@@ -204,6 +204,11 @@ Faye.Server = Faye.Class({
       if (response.error) return;
       channel = this._channels.findOrCreate(channel);
       client.subscribe(channel);
+
+      if (!Faye.Channel.isSubscribableMeta(channel)) {
+	      var smeta_message = {channel: "/smeta/clients" + channel.name, data: {message: "subscribe"}, clientId: clientId}
+	      this._handle(smeta_message, false, function() { }) 
+      }
     }, this);
     
     response.successful = !response.error;
@@ -236,7 +241,13 @@ Faye.Server = Faye.Class({
         return response.error = Faye.Error.channelInvalid(channel);
       
       channel = this._channels.get(channel);
-      if (channel) client.unsubscribe(channel);
+      if (channel) {
+	      client.unsubscribe(channel);
+	      if (!Faye.Channel.isSubscribableMeta(channel)) {
+		      var smeta_message = {channel: "/smeta/clients" + channel.name, data: {message: "unsubscribe"}, clientId: clientId}
+		      this._handle(smeta_message, false, function() { }) 
+	      }
+	    }
     }, this);
     
     response.successful = !response.error;
