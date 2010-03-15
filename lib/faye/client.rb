@@ -213,22 +213,6 @@ module Faye
       }
     end
     
-    def clients
-      return if @state != CONNECTED
-      
-      @transport.send({
-        'channel'     => Channel::CLIENTS,
-        'id'          => @client_id
-      }) do |response|
-        
-        unless response['successful']
-          return []
-        end
-        
-        return response['clients']
-      end
-    end
-    
     def handle_advice(advice)
       @advice.update(advice)
       @client_id = nil if @advice['reconnect'] == HANDSHAKE
