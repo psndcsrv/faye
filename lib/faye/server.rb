@@ -17,13 +17,6 @@ module Faye
       @clients.keys
     end
     
-    def clients(message, local = false)
-      response =  { 'channel' => Channel::CLIENTS,
-                    'id'      => message['id'] }
-      response['clients'] = client_ids
-      response
-    end
-    
     def process(messages, local = false, &callback)
       messages = [messages].flatten
       processed, responses = 0, []
@@ -236,6 +229,13 @@ module Faye
       end
       
       response['successful'] = response['error'].nil?
+      response
+    end
+    
+    def clients(message, local = false)
+      response =  { 'channel' => Channel::CLIENTS,
+                    'id'      => message['id'] }
+      response['clients'] = client_ids
       response
     end
     
