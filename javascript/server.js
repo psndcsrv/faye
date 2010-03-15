@@ -59,6 +59,9 @@ Faye.Server = Faye.Class({
     message.__id = Faye.random();
     if (Faye.Channel.isSubscribableMeta(channel)) {
 	    message = this[Faye.Channel.parse(channel)[1]](message, local);
+	    if (local) {
+	      return message;
+	    }
     }
     Faye.each(this._channels.glob(channel), function(c) { c.push(message) });
     
@@ -207,7 +210,7 @@ Faye.Server = Faye.Class({
 
       if (!Faye.Channel.isSubscribableMeta(channel)) {
 	      var smeta_message = {channel: "/smeta/clients" + channel.name, data: {message: "subscribe"}, clientId: clientId}
-	      this._handle(smeta_message, false, function() { }) 
+	      this._handle(smeta_message, true, function() { }) 
       }
     }, this);
     
@@ -245,7 +248,7 @@ Faye.Server = Faye.Class({
 	      client.unsubscribe(channel);
 	      if (!Faye.Channel.isSubscribableMeta(channel)) {
 		      var smeta_message = {channel: "/smeta/clients" + channel.name, data: {message: "unsubscribe"}, clientId: clientId}
-		      this._handle(smeta_message, false, function() { }) 
+		      this._handle(smeta_message, true, function() { }) 
 	      }
 	    }
     }, this);

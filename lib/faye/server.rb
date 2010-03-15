@@ -59,6 +59,7 @@ module Faye
       
       if Channel.subscribable_meta?(channel)
         message = __send__(Channel.parse(channel)[1], message, local)
+        return message unless local
       end
       
       @channels.glob(channel).each { |c| c << message }
@@ -197,7 +198,7 @@ module Faye
         if (! Channel.subscribable_meta?(channel))
           # send notification to the clients subscribable metadata channel
           smeta_message = {"channel" =>"/smeta/clients#{channel.name}","data" => {"message" => "subscribe"},"clientId" => client_id}
-          handle(smeta_message) {|r| nil }
+          handle(smeta_message, true) {|r| nil }
         end
       end
       
@@ -240,7 +241,7 @@ module Faye
           if (! Channel.subscribable_meta?(channel))
             # send notification to the clients subscribable metadata channel
             smeta_message = {"channel" =>"/smeta/clients#{channel.name}","data" => {"message" => "unsubscribe"},"clientId" => client_id}
-            handle(smeta_message) {|r| nil }
+            handle(smeta_message, true) {|r| nil }
           end
         end
       end
