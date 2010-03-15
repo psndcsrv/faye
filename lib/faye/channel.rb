@@ -18,10 +18,13 @@ module Faye
     SUBSCRIBE   = '/meta/subscribe'
     UNSUBSCRIBE = '/meta/unsubscribe'
     DISCONNECT  = '/meta/disconnect'
-    CLIENTS     = '/meta/clients'
     
     META        = :meta
     SERVICE     = :service
+    
+    # A subscribable service...
+    SUBSCRIBABLE_META = :smeta
+    CHANNEL_CLIENTS = '/smeta/clients'
     
     class << self
       def valid?(name)
@@ -42,6 +45,11 @@ module Faye
       def service?(name)
         segments = parse(name)
         segments ? (segments.first == SERVICE) : nil
+      end
+      
+      def subscribable_meta?(name)
+        segments = parse(name)
+        segments ? (segments.first == SUBSCRIBABLE_META) : nil
       end
       
       def subscribable?(name)

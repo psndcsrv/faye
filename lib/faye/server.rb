@@ -57,6 +57,10 @@ module Faye
       client_id = message['clientId']
       channel   = message['channel']
       
+      if Channel.subscribable_meta?(channel)
+        message = __send__(Channel.parse(channel)[1], message, local)
+      end
+      
       @channels.glob(channel).each { |c| c << message }
       
       if Channel.meta?(channel)
@@ -233,10 +237,8 @@ module Faye
     end
     
     def clients(message, local = false)
-      response =  { 'channel' => Channel::CLIENTS,
-                    'id'      => message['id'] }
-      response['clients'] = client_ids
-      response
+      message['data'] = client_ids
+      message
     end
     
   end
