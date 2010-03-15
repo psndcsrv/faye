@@ -12,8 +12,14 @@ Faye.Server = Faye.Class({
     return ids;
   },
 
+	clientNames: function() {
+    var names = [];
+    Faye.each(this._clients, function(key, value) { names.push(value._username) });
+    return names;
+  },
+
   clients: function(message, local) {
-    message.data = this.clientIds();
+    message.data = this.clientNames();
     return message;
   },
   

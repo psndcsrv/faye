@@ -17,6 +17,10 @@ module Faye
       @clients.keys
     end
     
+    def client_names
+      @clients.values.collect{|c| c.username}
+    end
+    
     def process(messages, local = false, &callback)
       messages = [messages].flatten
       processed, responses = 0, []
@@ -251,7 +255,7 @@ module Faye
     end
     
     def clients(message, local = false)
-      message['data'] = client_ids
+      message['data'] = client_names
       message
     end
     

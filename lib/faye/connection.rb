@@ -10,13 +10,15 @@ module Faye
     INTERVAL  = 1.0
     TIMEOUT   = 60.0
     
-    attr_reader :id   
+    attr_reader :id
+    attr_accessor :username
     
     def initialize(id, options = {})
       @id       = id
       @options  = options
       @channels = Set.new
       @inbox    = Set.new
+      @username = "anonymous"
     end
     
     def timeout
