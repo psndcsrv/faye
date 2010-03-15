@@ -12,9 +12,9 @@ Faye.Server = Faye.Class({
     return ids;
   },
 
-  clients: function() {
-    var ids = this.clientIds();
-    return {clients: ids}
+  clients: function(message, local) {
+    message.data = this.clientIds();
+    return message;
   },
   
   process: function(messages, local, callback) {
@@ -57,6 +57,9 @@ Faye.Server = Faye.Class({
         response;
     
     message.__id = Faye.random();
+    if (Faye.Channel.isSubscribableMeta(channel)) {
+	    message = this[Faye.Channel.parse(channel)[1]](message, local);
+    }
     Faye.each(this._channels.glob(channel), function(c) { c.push(message) });
     
     if (Faye.Channel.isMeta(channel)) {
