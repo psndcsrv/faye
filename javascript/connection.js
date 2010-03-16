@@ -8,7 +8,7 @@ Faye.Connection = Faye.Class({
     this._options   = options;
     this._channels  = new Faye.Set();
     this._inbox     = new Faye.Set();
-    this._username  = "anonymous";
+    this._channel_usernames  = {};
   },
   
   getTimeout: function() {
@@ -20,8 +20,13 @@ Faye.Connection = Faye.Class({
     this._beginDeliveryTimeout();
   },
   
-  subscribe: function(channel) {
+  subscribe: function(channel, username) {
     if (!this._channels.add(channel)) return;
+    if (username) {
+      this._channel_usernames[channel.name] = username;
+    } else {
+	    this._channel_usernames[channel.name] = 'anonymous';
+    }
     channel.on('message', this._onMessage, this);
   },
   
@@ -29,6 +34,7 @@ Faye.Connection = Faye.Class({
     if (channel === 'all') return this._channels.forEach(this.unsubscribe, this);
     if (!this._channels.member(channel)) return;
     this._channels.remove(channel);
+    this._channel_usernames[channel.name] = null;
     channel.stopObserving('message', this._onMessage, this);
   },
   
@@ -61,6 +67,10 @@ Faye.Connection = Faye.Class({
   disconnect: function() {
     this.unsubscribe('all');
     this.flush();
+  },
+
+  username: function(channel_name) {
+	  return this._channel_usernames[channel_name];
   },
   
   _beginDeliveryTimeout: function() {

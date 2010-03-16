@@ -15,6 +15,7 @@ module Faye
     NONE           = 'none'
     
     attr_reader :endpoint, :namespace
+    attr_accessor :username
     
     def initialize(endpoint = nil)
       @endpoint = endpoint || RackAdapter::DEFAULT_ENDPOINT
@@ -23,6 +24,7 @@ module Faye
       @namespace = Namespace.new
       @outbox    = []
       @channels  = Channel::Tree.new
+      @username  = 'anonymous'
       
       @advice = {'reconnect' => RETRY, 'interval' => Connection::INTERVAL}
     end
@@ -104,7 +106,7 @@ module Faye
         'clientId'        => @client_id,
         'connectionType'  => @transport.connection_type,
         'id'              => @connection_id
-        
+        'username'        => @username
       }) do |response|
         @connection_id = nil
         add_timer(@advice['interval'] / 1000.0) { connect }

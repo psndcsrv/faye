@@ -20,6 +20,7 @@ Faye.Client = Faye.Class({
     this._outbox    = [];
     this._channels  = new Faye.Channel.Tree();
     this._callbacks = [];
+    this._username  = 'anonymous';
     
     this._advice = {reconnect: this.RETRY, interval: this.INTERVAL};
     
@@ -152,7 +153,8 @@ Faye.Client = Faye.Class({
       this._transport.send({
         channel:      Faye.Channel.SUBSCRIBE,
         clientId:     this._clientId,
-        subscription: channels
+        subscription: channels,
+        username:     this._username,
         
       }, function(response) {
         if (!response.successful) return;

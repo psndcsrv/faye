@@ -17,8 +17,9 @@ module Faye
       @clients.keys
     end
     
-    def client_names
-      @clients.values.collect{|c| c.username}
+    def client_names(channel_name)
+      # FIXME We should really be able to get a list of connections for a channel, and then just .collect on that
+      @clients.values.collect{|c| c.username(channel_name)}.compact
     end
     
     def process(messages, local = false, &callback)
@@ -171,6 +172,7 @@ module Faye
     
     # MUST contain  * clientId
     #               * subscription
+    #               * username
     # MAY contain   * ext
     #               * id
     def subscribe(message, local = false)
@@ -186,7 +188,10 @@ module Faye
       
       response['error'] = Error.client_unknown(client_id) if client.nil?
       response['error'] = Error.parameter_missing('clientId') if client_id.nil?
-      response['error'] = Error.parameter_missing('subscription') if message['subscription'].nil?
+      response['error'] = Error.parameter_missing('subscription') if message['subscription'].nil?     
+      response['error'] = Error.parameter_missing('username') if message['username'].nil?
+      
+      username = message['username'] ? message['username'] : 'anonymous'
       
       response['subscription'] = subscription.compact
       
@@ -197,11 +202,15 @@ module Faye
         
         next if response['error']
         channel = @channels[channel] ||= Channel.new(channel)
-        client.subscribe(channel)
+        client.subscribe(channel, username)
         
         if (! Channel.subscribable_meta?(channel.name))
           # send notification to the clients subscribable metadata channel
-          smeta_message = {"channel" =>"/smeta/clients#{channel.name}","data" => {"message" => "subscribe"},"clientId" => client_id}
+          smeta_message = { "channel" =>"/smeta/clients#{channel.name}",
+                            "real_channel" => channel.name,
+                            "data" => {"message" => "subscribe"},
+                            "clientId" => client_id
+                          }
           handle(smeta_message, true) {|r| nil }
         end
       end
@@ -244,7 +253,11 @@ module Faye
           client.unsubscribe(channel)
           if (! Channel.subscribable_meta?(channel.name))
             # send notification to the clients subscribable metadata channel
-            smeta_message = {"channel" =>"/smeta/clients#{channel.name}","data" => {"message" => "unsubscribe"},"clientId" => client_id}
+            smeta_message = { "channel" =>"/smeta/clients#{channel.name}",
+                              "real_channel" => channel.name,
+                              "data" => {"message" => "unsubscribe"},
+                              "clientId" => client_id
+                             }
             handle(smeta_message, true) {|r| nil }
           end
         end
@@ -255,7 +268,7 @@ module Faye
     end
     
     def clients(message, local = false)
-      message['data'] = client_names
+      message['data'] = client_names(message["real_channel"])
       message
     end
     
