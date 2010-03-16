@@ -268,6 +268,10 @@ Faye.Client = Faye.Class({
       if (!Faye.Channel.isSubscribable(channel))
         throw 'Clients may not subscribe to channel "' + channel + '"';
     });
+  },
+
+  set_username: function(username) {
+	  this._username = username;
   }
 });
 
