@@ -105,7 +105,7 @@ module Faye
         'channel'         => Channel::CONNECT,
         'clientId'        => @client_id,
         'connectionType'  => @transport.connection_type,
-        'id'              => @connection_id
+        'id'              => @connection_id,
         'username'        => @username
       }) do |response|
         @connection_id = nil
