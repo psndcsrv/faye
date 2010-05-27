@@ -34,51 +34,28 @@ Faye.extend(Faye, {
   },
   
   Grammar: {
-
     LOWALPHA:     /^[a-z]$/,
-
     UPALPHA:     /^[A-Z]$/,
-
     ALPHA:     /^([a-z]|[A-Z])$/,
-
     DIGIT:     /^[0-9]$/,
-
     ALPHANUM:     /^(([a-z]|[A-Z])|[0-9])$/,
-
     MARK:     /^(\-|\_|\!|\~|\(|\)|\$|\@)$/,
-
     STRING:     /^(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)| |\/|\*|\.))*$/,
-
     TOKEN:     /^(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)))+$/,
-
     INTEGER:     /^([0-9])+$/,
-
     CHANNEL_SEGMENT:     /^(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)))+$/,
-
     CHANNEL_SEGMENTS:     /^(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)))+(\/(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)))+)*$/,
-
     CHANNEL_NAME:     /^\/(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)))+(\/(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)))+)*$/,
-
     WILD_CARD:     /^\*{1,2}$/,
-
     CHANNEL_PATTERN:     /^(\/(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)))+)*\/\*{1,2}$/,
-
     VERSION_ELEMENT:     /^(([a-z]|[A-Z])|[0-9])(((([a-z]|[A-Z])|[0-9])|\-|\_))*$/,
-
     VERSION:     /^([0-9])+(\.(([a-z]|[A-Z])|[0-9])(((([a-z]|[A-Z])|[0-9])|\-|\_))*)*$/,
-
     CLIENT_ID:     /^((([a-z]|[A-Z])|[0-9]))+$/,
-
     ID:     /^((([a-z]|[A-Z])|[0-9]))+$/,
-
     ERROR_MESSAGE:     /^(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)| |\/|\*|\.))*$/,
-
     ERROR_ARGS:     /^(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)| |\/|\*|\.))*(,(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)| |\/|\*|\.))*)*$/,
-
     ERROR_CODE:     /^[0-9][0-9][0-9]$/,
-
     ERROR:     /^([0-9][0-9][0-9]:(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)| |\/|\*|\.))*(,(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)| |\/|\*|\.))*)*:(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)| |\/|\*|\.))*|[0-9][0-9][0-9]::(((([a-z]|[A-Z])|[0-9])|(\-|\_|\!|\~|\(|\)|\$|\@)| |\/|\*|\.))*)$/
-
   },
   
   commonElement: function(lista, listb) {
@@ -251,10 +228,11 @@ Faye.extend(Faye.Channel, {
   SUBSCRIBE:    '/meta/subscribe',
   UNSUBSCRIBE:  '/meta/unsubscribe',
   DISCONNECT:   '/meta/disconnect',
-  CLIENTS:      '/meta/clients',
   
   META:         'meta',
   SERVICE:      'service',
+
+  SUBSCRIBABLE_META:  'smeta',
   
   isValid: function(name) {
     return Faye.Grammar.CHANNEL_NAME.test(name) ||
@@ -269,6 +247,11 @@ Faye.extend(Faye.Channel, {
   isMeta: function(name) {
     var segments = this.parse(name);
     return segments ? (segments[0] === this.META) : null;
+  },
+
+  isSubscribableMeta: function(name) {
+    var segments = this.parse(name);
+    return segments ? (segments[0] === this.SUBSCRIBABLE_META) : null;
   },
   
   isService: function(name) {
@@ -468,6 +451,7 @@ Faye.Client = Faye.Class({
     this._outbox    = [];
     this._channels  = new Faye.Channel.Tree();
     this._callbacks = [];
+    this._username  = 'anonymous';
     
     this._advice = {reconnect: this.RETRY, interval: this.INTERVAL};
     
@@ -600,7 +584,8 @@ Faye.Client = Faye.Class({
       this._transport.send({
         channel:      Faye.Channel.SUBSCRIBE,
         clientId:     this._clientId,
-        subscription: channels
+        subscription: channels,
+        username:     this._username,
         
       }, function(response) {
         if (!response.successful) return;
@@ -714,6 +699,10 @@ Faye.Client = Faye.Class({
       if (!Faye.Channel.isSubscribable(channel))
         throw 'Clients may not subscribe to channel "' + channel + '"';
     });
+  },
+
+  set_username: function(username) {
+	  this._username = username;
   }
 });
 
@@ -780,9 +769,17 @@ Faye.Server = Faye.Class({
     return ids;
   },
 
-  clients: function() {
-    var ids = this.clientIds();
-    return {clients: ids}
+	clientNames: function(channel_name) {
+    var names = [];
+    if (channel_name) {
+      Faye.each(this._clients, function(key, value) { names.push(value.username(channel_name)) });
+    }
+    return names;
+  },
+
+  clients: function(message, local) {
+    message.data = this.clientNames(message.real_channel);
+    return message;
   },
   
   process: function(messages, local, callback) {
@@ -825,6 +822,12 @@ Faye.Server = Faye.Class({
         response;
     
     message.__id = Faye.random();
+    if (Faye.Channel.isSubscribableMeta(channel)) {
+	    message = this[Faye.Channel.parse(channel)[1]](message, local);
+	    if (local) {
+	      return message;
+	    }
+    }
     Faye.each(this._channels.glob(channel), function(c) { c.push(message) });
     
     if (Faye.Channel.isMeta(channel)) {
@@ -942,6 +945,7 @@ Faye.Server = Faye.Class({
   
   // MUST contain  * clientId
   //               * subscription
+  //               * username
   // MAY contain   * ext
   //               * id
   subscribe: function(message, local) {
@@ -958,7 +962,9 @@ Faye.Server = Faye.Class({
     if (!client)               response.error = Faye.Error.clientUnknown(clientId);
     if (!clientId)             response.error = Faye.Error.parameterMissing('clientId');
     if (!message.subscription) response.error = Faye.Error.parameterMissing('subscription');
+    if (!message.username)     response.error = Faye.Error.parameterMissing('username');
     
+    var username = message.username ? message.username : 'anonymous';
     response.subscription = subscription;
     
     Faye.each(subscription, function(channel) {
@@ -968,7 +974,12 @@ Faye.Server = Faye.Class({
       
       if (response.error) return;
       channel = this._channels.findOrCreate(channel);
-      client.subscribe(channel);
+      client.subscribe(channel, username);
+
+      if (!Faye.Channel.isSubscribableMeta(channel.name)) {
+	      var smeta_message = {channel: "/smeta/clients" + channel.name, real_channel: channel.name, data: {message: "subscribe"}, clientId: clientId}
+	      this._handle(smeta_message, true, function() { }) 
+      }
     }, this);
     
     response.successful = !response.error;
@@ -1001,7 +1012,13 @@ Faye.Server = Faye.Class({
         return response.error = Faye.Error.channelInvalid(channel);
       
       channel = this._channels.get(channel);
-      if (channel) client.unsubscribe(channel);
+      if (channel) {
+	      client.unsubscribe(channel);
+	      if (!Faye.Channel.isSubscribableMeta(channel.name)) {
+		      var smeta_message = {channel: "/smeta/clients" + channel.name, real_channel: channel.name, data: {message: "unsubscribe"}, clientId: clientId}
+		      this._handle(smeta_message, true, function() { }) 
+	      }
+	    }
     }, this);
     
     response.successful = !response.error;
@@ -1020,6 +1037,7 @@ Faye.Connection = Faye.Class({
     this._options   = options;
     this._channels  = new Faye.Set();
     this._inbox     = new Faye.Set();
+    this._channel_usernames  = {};
   },
   
   getTimeout: function() {
@@ -1031,8 +1049,13 @@ Faye.Connection = Faye.Class({
     this._beginDeliveryTimeout();
   },
   
-  subscribe: function(channel) {
+  subscribe: function(channel, username) {
     if (!this._channels.add(channel)) return;
+    if (username) {
+      this._channel_usernames[channel.name] = username;
+    } else {
+	    this._channel_usernames[channel.name] = 'anonymous';
+    }
     channel.on('message', this._onMessage, this);
   },
   
@@ -1040,6 +1063,7 @@ Faye.Connection = Faye.Class({
     if (channel === 'all') return this._channels.forEach(this.unsubscribe, this);
     if (!this._channels.member(channel)) return;
     this._channels.remove(channel);
+    this._channel_usernames[channel.name] = null;
     channel.stopObserving('message', this._onMessage, this);
   },
   
@@ -1072,6 +1096,10 @@ Faye.Connection = Faye.Class({
   disconnect: function() {
     this.unsubscribe('all');
     this.flush();
+  },
+
+  username: function(channel_name) {
+	  return this._channel_usernames[channel_name];
   },
   
   _beginDeliveryTimeout: function() {
@@ -1135,55 +1163,42 @@ Faye.Error = Faye.Class({
   }
 });
 
-
 Faye.Error.versionMismatch = function() {
   return new this(300, arguments, "Version mismatch").toString();
 };
-
 Faye.Error.conntypeMismatch = function() {
   return new this(301, arguments, "Connection types not supported").toString();
 };
-
 Faye.Error.extMismatch = function() {
   return new this(302, arguments, "Extension mismatch").toString();
 };
-
 Faye.Error.badRequest = function() {
   return new this(400, arguments, "Bad request").toString();
 };
-
 Faye.Error.clientUnknown = function() {
   return new this(401, arguments, "Unknown client").toString();
 };
-
 Faye.Error.parameterMissing = function() {
   return new this(402, arguments, "Missing required parameter").toString();
 };
-
 Faye.Error.channelForbidden = function() {
   return new this(403, arguments, "Forbidden channel").toString();
 };
-
 Faye.Error.channelUnknown = function() {
   return new this(404, arguments, "Unknown channel").toString();
 };
-
 Faye.Error.channelInvalid = function() {
   return new this(405, arguments, "Invalid channel").toString();
 };
-
 Faye.Error.extUnknown = function() {
   return new this(406, arguments, "Unknown extension").toString();
 };
-
 Faye.Error.publishFailed = function() {
   return new this(407, arguments, "Failed to publish").toString();
 };
-
 Faye.Error.serverError = function() {
   return new this(500, arguments, "Internal server error").toString();
 };
-
 
 
 Faye.NodeHttpTransport = Faye.Class(Faye.Transport, {
