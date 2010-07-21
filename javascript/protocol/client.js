@@ -24,6 +24,7 @@ Faye.Client = Faye.Class({
     this._state     = this.UNCONNECTED;
     this._outbox    = [];
     this._channels  = new Faye.Channel.Tree();
+    this._username  = 'anonymous';
     
     this._namespace = new Faye.Namespace();
     this._responseCallbacks = {};
@@ -173,7 +174,8 @@ Faye.Client = Faye.Class({
       this._send({
         channel:      Faye.Channel.SUBSCRIBE,
         clientId:     this._clientId,
-        subscription: channels
+        subscription: channels,
+        username:     this._username,
         
       }, function(response) {
         if (!response.successful) return;
@@ -262,7 +264,17 @@ Faye.Client = Faye.Class({
       this._deliverMessage(message);
     }, this);
   },
-  
+
+  clients: function(callback) {
+    if (this._state !== this.CONNECTED) {
+	    return;
+	  }
+    this._transport.send({
+      channel:  Faye.Channel.CLIENTS,
+      id:       this._clientId,
+    }, callback, this);
+  },
+
   _handleAdvice: function(advice) {
     Faye.extend(this._advice, advice);
     
@@ -327,6 +339,14 @@ Faye.Client = Faye.Class({
       throw '"' + channel + '" is not a valid channel name';
     if (!Faye.Channel.isSubscribable(channel))
       throw 'Clients may not subscribe to channel "' + channel + '"';
+  },
+  
+  _validateChannels: function(channels) {
+    Faye.each(channels, _validateChannel);
+  },
+
+  set_username: function(username) {
+	  this._username = username;
   }
 });
 

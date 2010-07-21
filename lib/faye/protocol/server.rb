@@ -16,6 +16,10 @@ module Faye
       @connections.keys
     end
     
+    def client_names(channel_name)
+      @connections.values.collect{|c| c.username(channel_name)}.compact
+    end
+    
     def process(messages, local_or_remote = false, &callback)
       socket = local_or_remote.is_a?(WebSocket) ? local_or_remote : nil
       local  = (local_or_remote == true)
@@ -68,8 +72,11 @@ module Faye
     end
     
     def destroy_connection(connection)
+      msg = {"clientId" => client.id, "message" => {"data" => "disconnect"}}
+      channels = client.channels
       connection.disconnect!
       connection.remove_subscriber(:stale_connection, method(:destroy_connection))
+      channels.each{|c| c << msg.merge({"channel" => "/smeta/clients#{c.name}"}); puts "notifying client channel of disco: #{c.name}" }
       @connections.delete(connection.id)
     end
     
@@ -246,6 +253,8 @@ module Faye
       response['error'] = Error.parameter_missing('clientId') if client_id.nil?
       response['error'] = Error.parameter_missing('subscription') if message['subscription'].nil?
       
+      username = message['username'] ? message['username'] : 'anonymous'
+      
       response['subscription'] = subscription.compact
       
       subscription.each do |channel|
@@ -257,7 +266,24 @@ module Faye
         channel = @channels[channel] ||= Channel.new(channel)
         
         info('Subscribing client ? to ?', client_id, channel.name)
-        connection.subscribe(channel)
+        connection.subscribe(channel, username)
+        
+        smeta_message = {} 
+        if (Channel.subscribable_meta?(channel.name))
+          smeta_message = { "channel" =>channel.name,
+                            "real_channel" => channel.name.sub(/^\/smeta\/clients/,''),
+                            "data" => {"message" => "subscribe"},
+                            "clientId" => client_id
+                          }
+        else
+          # send notification to the clients subscribable metadata channel
+          smeta_message = { "channel" =>"/smeta/clients#{channel.name}",
+                            "real_channel" => channel.name,
+                            "data" => {"message" => "subscribe"},
+                            "clientId" => client_id
+                          }
+        end
+        handle(smeta_message, true) {|r| nil }
       end
       
       response['successful'] = response['error'].nil?
@@ -294,10 +320,32 @@ module Faye
         
         info('Unsubscribing client ? from ?', client_id, channel.name)
         connection.unsubscribe(channel)
+        
+        smeta_message = {}
+        if (Channel.subscribable_meta?(channel.name))
+          smeta_message = { "channel" =>channel.name,
+                          "real_channel" => channel.name.sub(/^\/smeta\/clients/,''),
+                          "data" => {"message" => "subscribe"},
+                          "clientId" => client_id
+                        }
+        else
+          # send notification to the clients subscribable metadata channel
+          smeta_message = { "channel" =>"/smeta/clients#{channel.name}",
+                            "real_channel" => channel.name,
+                            "data" => {"message" => "unsubscribe"},
+                            "clientId" => client_id
+                           }
+        end
+        handle(smeta_message, true) {|r| nil }
       end
       
       response['successful'] = response['error'].nil?
       response
+    end
+    
+    def clients(message, local = false)
+      message['data'] = client_names(message["real_channel"])
+      message
     end
     
   end

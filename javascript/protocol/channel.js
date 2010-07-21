@@ -19,6 +19,8 @@ Faye.extend(Faye.Channel, {
   
   META:         '<%= Faye::Channel::META %>',
   SERVICE:      '<%= Faye::Channel::SERVICE %>',
+
+  SUBSCRIBABLE_META:  '<%= Faye::Channel::SUBSCRIBABLE_META %>',
   
   isValid: function(name) {
     return Faye.Grammar.CHANNEL_NAME.test(name) ||
@@ -33,6 +35,11 @@ Faye.extend(Faye.Channel, {
   isMeta: function(name) {
     var segments = this.parse(name);
     return segments ? (segments[0] === this.META) : null;
+  },
+
+  isSubscribableMeta: function(name) {
+    var segments = this.parse(name);
+    return segments ? (segments[0] === this.SUBSCRIBABLE_META) : null;
   },
   
   isService: function(name) {

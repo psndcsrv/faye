@@ -11,6 +11,14 @@ Faye.Server = Faye.Class({
     return Faye.map(this._connections, function(key, value) { return key });
   },
   
+  clientNames: function(channel_name) {
+    var names = [];
+    if (channel_name) {
+      names = Faye.map(this._clients, function(key, value) { return value.username(channel_name) });
+    }
+    return names;
+  },
+  
   process: function(messages, localOrRemote, callback, scope) {
     var socket = (localOrRemote instanceof Faye.WebSocket) ? localOrRemote : null,
         local  = (localOrRemote === true);
@@ -252,6 +260,8 @@ Faye.Server = Faye.Class({
     if (!clientId)             response.error = Faye.Error.parameterMissing('clientId');
     if (!message.subscription) response.error = Faye.Error.parameterMissing('subscription');
     
+    var username = message.username ? message.username : 'anonymous';
+    
     response.subscription = subscription;
     
     Faye.each(subscription, function(channel) {
@@ -263,7 +273,13 @@ Faye.Server = Faye.Class({
       channel = this._channels.findOrCreate(channel);
       
       this.info('Subscribing client ? to ?', clientId, channel.name);
-      connection.subscribe(channel);
+      connection.subscribe(channel, username);
+      
+      // notify the clients subscribable-meta channel of a new subscription
+      if (!Faye.Channel.isSubscribableMeta(channel.name)) {
+	      var smeta_message = {channel: "/smeta/clients" + channel.name, real_channel: channel.name, data: {message: "subscribe"}, clientId: clientId}
+	      this._handle(smeta_message, true, function() { }) 
+      }
     }, this);
     
     response.successful = !response.error;
@@ -300,6 +316,12 @@ Faye.Server = Faye.Class({
       
       this.info('Unsubscribing client ? from ?', clientId, channel.name);
       connection.unsubscribe(channel);
+      
+      // notify the clients subscribable-meta channel of an unsubscription
+      if (!Faye.Channel.isSubscribableMeta(channel.name)) {
+	      var smeta_message = {channel: "/smeta/clients" + channel.name, real_channel: channel.name, data: {message: "unsubscribe"}, clientId: clientId}
+	      this._handle(smeta_message, true, function() { }) 
+      }
     }, this);
     
     response.successful = !response.error;

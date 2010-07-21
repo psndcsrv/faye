@@ -9,6 +9,7 @@ module Faye
     TIMEOUT   = 60.0
     
     attr_reader :id, :interval, :timeout
+    attr_accessor :channel_usernames
     
     def initialize(id, options = {})
       @id        = id
@@ -18,6 +19,7 @@ module Faye
       @channels  = Set.new
       @inbox     = Set.new
       @connected = false
+      @channel_usernames = {}
       
       begin_deletion_timeout
     end
@@ -33,9 +35,10 @@ module Faye
       begin_delivery_timeout
     end
     
-    def subscribe(channel)
+    def subscribe(channel, username = 'anonymous')
       return unless @channels.add?(channel)
       channel.add_subscriber(:message, method(:on_message))
+      @channel_usernames[channel.name] = username
     end
     
     def unsubscribe(channel)
@@ -43,6 +46,7 @@ module Faye
       return unless @channels.member?(channel)
       @channels.delete(channel)
       channel.remove_subscriber(:message, method(:on_message))
+      @channel_usernames.delete(channel.name)
     end
     
     def connect(options, &block)

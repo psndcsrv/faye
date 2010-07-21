@@ -17,7 +17,8 @@ module Faye
     
     CONNECTION_TIMEOUT  = 60.0
     
-    attr_reader :endpoint, :client_id
+    attr_reader :endpoint, :namespace, :client_id
+    attr_accessor :username
     
     def initialize(endpoint = nil, options = {})
       info('New client created for ?', endpoint)
@@ -29,6 +30,7 @@ module Faye
       @state     = UNCONNECTED
       @outbox    = []
       @channels  = Channel::Tree.new
+      @username  = 'anonymous'
       
       @namespace = Namespace.new
       @response_callbacks = {}
@@ -122,7 +124,9 @@ module Faye
       send({
         'channel'         => Channel::CONNECT,
         'clientId'        => @client_id,
-        'connectionType'  => @transport.connection_type
+        'connectionType'  => @transport.connection_type,
+        'id'              => @connection_id,
+        'username'        => @username
         
       }) do
         cycle_connection
