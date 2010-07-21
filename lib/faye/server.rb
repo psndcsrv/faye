@@ -53,8 +53,11 @@ module Faye
     end
     
     def destroy_client(client)
+      msg = {"clientId" => client.id, "message" => {"data" => "disconnect"}}
+      channels = client.channels
       client.disconnect!
       client.delete_observer(self)
+      channels.each{|c| c << msg.merge({"channel" => "/smeta/clients#{c.name}"}); puts "notifying client channel of disco: #{c.name}" }
       @clients.delete(client.id)
     end
     
@@ -204,15 +207,22 @@ module Faye
         channel = @channels[channel] ||= Channel.new(channel)
         client.subscribe(channel, username)
         
-        if (! Channel.subscribable_meta?(channel.name))
+        smeta_message = {} 
+        if (Channel.subscribable_meta?(channel.name))
+          smeta_message = { "channel" =>channel.name,
+                            "real_channel" => channel.name.sub(/^\/smeta\/clients/,''),
+                            "data" => {"message" => "subscribe"},
+                            "clientId" => client_id
+                          }
+        else
           # send notification to the clients subscribable metadata channel
           smeta_message = { "channel" =>"/smeta/clients#{channel.name}",
                             "real_channel" => channel.name,
                             "data" => {"message" => "subscribe"},
                             "clientId" => client_id
                           }
-          handle(smeta_message, true) {|r| nil }
         end
+        handle(smeta_message, true) {|r| nil }
       end
       
       response['successful'] = response['error'].nil?
@@ -251,15 +261,22 @@ module Faye
         channel = @channels[channel]
         if channel
           client.unsubscribe(channel)
-          if (! Channel.subscribable_meta?(channel.name))
+          smeta_message = {}
+          if (Channel.subscribable_meta?(channel.name))
+            smeta_message = { "channel" =>channel.name,
+                            "real_channel" => channel.name.sub(/^\/smeta\/clients/,''),
+                            "data" => {"message" => "subscribe"},
+                            "clientId" => client_id
+                          }
+          else
             # send notification to the clients subscribable metadata channel
             smeta_message = { "channel" =>"/smeta/clients#{channel.name}",
                               "real_channel" => channel.name,
                               "data" => {"message" => "unsubscribe"},
                               "clientId" => client_id
                              }
-            handle(smeta_message, true) {|r| nil }
           end
+          handle(smeta_message, true) {|r| nil }
         end
       end
       

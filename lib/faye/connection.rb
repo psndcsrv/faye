@@ -10,7 +10,7 @@ module Faye
     INTERVAL  = 1.0
     TIMEOUT   = 60.0
     
-    attr_reader :id
+    attr_reader :id, :channels
     attr_accessor :channel_usernames
     
     def initialize(id, options = {})
